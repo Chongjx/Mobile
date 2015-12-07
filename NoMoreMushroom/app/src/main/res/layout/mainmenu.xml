@@ -12,36 +12,24 @@
 
     tools:context=".Mainmenu">
 
-    <Button
-        android:id = "@+id/btn_start"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:background="@drawable/board"
-        android:textColor="#000000"
-        android:text="Start"
-        android:textSize="18dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignStart="@+id/btn_quit"/>
-
-    <Button
-        android:id = "@+id/btn_quit"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:background="@drawable/board"
-        android:textColor="#000000"
-        android:text="Quit"
-        android:textSize="18dp"
-        android:layout_marginEnd="107dp"
-        android:layout_below="@+id/btn_start"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="33dp"/>
-
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_centerVertical="true"
         android:layout_alignParentStart="true"
         android:layout_marginStart="177dp">
+
+        <Button
+            android:id = "@+id/btn_start"
+            android:layout_width="100dp"
+            android:layout_height="50dp"
+            android:background="@drawable/board"
+            android:textColor="#000000"
+            android:text="Start"
+            android:textSize="18dp"
+            android:layout_marginTop="50dp"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"/>
     </RelativeLayout>
 
 

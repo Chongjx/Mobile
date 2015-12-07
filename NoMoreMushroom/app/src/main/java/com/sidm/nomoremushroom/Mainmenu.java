@@ -12,7 +12,6 @@ import android.widget.Button;
 public class Mainmenu extends Activity implements OnClickListener
 {
     private Button btn_start;
-    private Button btn_quit;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -26,9 +25,6 @@ public class Mainmenu extends Activity implements OnClickListener
 
         btn_start = (Button)findViewById(R.id.btn_start);
         btn_start.setOnClickListener(this);
-
-        btn_quit = (Button)findViewById(R.id.btn_quit);
-        btn_quit.setOnClickListener(this);
     }
 
     public void onClick(View v)
@@ -38,10 +34,6 @@ public class Mainmenu extends Activity implements OnClickListener
         if (v == btn_start)
         {
             intent.setClass(this, WorldMap.class);
-        }
-
-        else if (v == btn_quit)
-        {
         }
 
         startActivity(intent);

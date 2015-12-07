@@ -16,7 +16,6 @@ import android.widget.Button;
 public class WorldMap extends Activity implements OnClickListener
 {
     private Button btn_play;
-    private Button btn_backMenu;
     private Button btn_options;
 
     @Override
@@ -32,9 +31,6 @@ public class WorldMap extends Activity implements OnClickListener
         btn_play = (Button)findViewById(R.id.btn_play);
         btn_play.setOnClickListener(this);
 
-        btn_backMenu = (Button)findViewById(R.id.btn_backMenu);
-        btn_backMenu.setOnClickListener(this);
-
         btn_options = (Button)findViewById(R.id.btn_options);
         btn_options.setOnClickListener(this);
     }
@@ -46,11 +42,6 @@ public class WorldMap extends Activity implements OnClickListener
         if (v == btn_play)
         {
             intent.setClass(this, Gamepage.class);
-        }
-
-        if (v == btn_backMenu)
-        {
-            intent.setClass(this, Mainmenu.class);
         }
 
         else if (v == btn_options)
