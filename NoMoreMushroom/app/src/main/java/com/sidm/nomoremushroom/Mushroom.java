@@ -179,5 +179,7 @@ public class Mushroom
     {
         this.render = false;
         this.update = false;
+
+        this.setPos(-200.f, -200.f);
     }
 }

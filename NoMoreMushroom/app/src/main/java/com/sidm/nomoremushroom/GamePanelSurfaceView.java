@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
@@ -13,6 +14,7 @@ import android.view.SurfaceView;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.Vector;
+import java.util.regex.Pattern;
 
 public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.Callback{
     // Implement this interface to receive information about changes to the surface.
@@ -43,11 +45,23 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     float deltaTime;
     long dt;
 
+    private boolean toDisplay;
+    private int countDown;
     // store the touch location
     private short mX = 0, mY = 0;
 
     // Variable for Game State check
-    private short GameState;
+
+    private enum GAME_STATE
+    {
+        STATE_COUNTDOWN,
+        STATE_PLAY,
+        STATE_END
+    }
+
+    private GAME_STATE GameState;
+
+    private boolean touch;
 
     // store the mushrooms
     private Vector<Mushroom> mushroomVector;
@@ -59,6 +73,8 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private int gameScore;
     private int mushCount;
     private int xOffset;
+    private float touchTimer;
+    private int alphaChange;
 
     //constructor for this GamePanelSurfaceView class
     public GamePanelSurfaceView (Context context){
@@ -85,10 +101,15 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         paint.setStrokeWidth(100);
         paint.setTextSize(30);
 
+        GameState = GAME_STATE.STATE_PLAY;
+
         gameSpeed = 20.f;
         gameScore = 0;
         mushCount = 0;
         xOffset = 200;
+        touchTimer = 0.f;
+        toDisplay = false;
+        alphaChange = 0;
 
         // Make the GamePanel focusable so it can handle events
         setFocusable(true);
@@ -154,6 +175,8 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 ++mushCount;
             }
         }
+
+        touch = false;
     }
 
     public void spawnMush(Mushroom.MUSH_TYPE type)
@@ -236,6 +259,16 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
     }
 
+    public void RenderBlank(Canvas canvas)
+    {
+        if (canvas == null)
+        {
+            return;
+        }
+        canvas.drawARGB(255, 0, 0, 0);
+        //canvas.drawRect(0, 0, screenWidth, screenHeight, paint);
+    }
+
     public void RenderGameplay(Canvas canvas) {
         // 2) Re-draw 2nd image after the 1st image ends
         if (canvas == null)
@@ -260,24 +293,44 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         // Bonus) To print FPS on the screen
         canvas.drawText("FPS:" + FPS, 130, 75, paint);
-        canvas.drawText("SCORE:" + gameScore, screenWidth/ 2, 75, paint);
+        canvas.drawText("SCORE:" + gameScore, screenWidth / 2, 75, paint);
     }
 
 
     //Update method to update the game play
     public void update(float dt, float fps){
         FPS = fps;
-
-        switch (GameState) {
-            case 0:
+        this.deltaTime = dt;
+        switch (GameState)
+        {
+            case STATE_COUNTDOWN:
             {
-                // 3) Update the background to allow panning effect
-                //bgX -= 500 * dt;    // change speed of the panning effect
-                //if (bgX < -screenWidth)
-                //{
-                //    bgX = 0;
-                //}
+                break;
+            }
+            case STATE_PLAY:
+            {
 
+                if (toDisplay)
+               {
+                   touchTimer += dt;
+                }
+
+                if (touchTimer > 0.5f)
+                {
+                    touch = false;
+                    toDisplay = false;
+                    touchTimer = 0.f;
+                }
+
+                if (alphaChange < 255)
+                {
+                    alphaChange += 10;
+
+                    if (alphaChange > 255)
+                    {
+                        alphaChange = 0;
+                    }
+                }
                 // 4e) Update the spaceship images / shipIndex so that the animation will occur.
                 changeFrame += dt;
                 if (changeFrame > 0.5f)
@@ -306,7 +359,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                         dir.set(mushroomVector.elementAt(i).getxDir(), mushroomVector.elementAt(i)
                                 .getyDir());
 
-                        mushroomVector.elementAt(i).setPos(pos.x + dir.x, pos.y);
+                        mushroomVector.elementAt(i).setPos(pos.x + dir.x * 5, pos.y);
                         mushroomVector.elementAt(i).getSprite().update(System.currentTimeMillis());
 
                         float xPos = mushroomVector.elementAt(i).getxPos();
@@ -324,8 +377,13 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 }
 
                 //stone_anim.update(System.currentTimeMillis());
+                break;
             }
-            break;
+
+            case STATE_END:
+            {
+                break;
+            }
         }
     }
 
@@ -333,9 +391,30 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     public void doDraw(Canvas canvas){
         switch (GameState)
         {
-            case 0:
+            case STATE_COUNTDOWN:
+            {
                 RenderGameplay(canvas);
                 break;
+            }
+
+            case STATE_PLAY:
+            {
+                System.out.println(touch);
+                RenderGameplay(canvas);
+
+                if(touch == false)
+                {
+                    RenderBlank(canvas);
+                }
+
+                break;
+            }
+
+            case STATE_END:
+            {
+                RenderGameplay(canvas);
+                break;
+            }
         }
     }
 
@@ -346,31 +425,43 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         short X = (short)event.getX();
         short Y = (short)event.getY();
 
-        if (event.getAction() == MotionEvent.ACTION_DOWN)
+        switch(event.getAction())
         {
-            for (int i = 0; i < mushroomVector.size(); ++i)
+            case MotionEvent.ACTION_DOWN:
             {
-                if (mushroomVector.elementAt(i).getRender() == true)
+                touch = true;
+                for (int i = 0; i < mushroomVector.size(); ++i)
                 {
-                    Vec2 mushPos = new Vec2(mushroomVector.elementAt(i).getxPos(), mushroomVector.elementAt(i)
-                            .getyPos());
-                    Vec2 mushDimension = new Vec2(mushroomVector.elementAt(i).getSprite().getSpriteWidth(),
-                            mushroomVector
-                            .elementAt(i).getSprite().getSpriteHeight());
-
-                    if (CheckCollision(Math.round(mushPos.getX()), Math.round(mushPos.getY()),
-                            Math.round(mushDimension.x), Math.round(mushDimension.y), X, Y, 0, 0))
+                    if (mushroomVector.elementAt(i).getRender() == true)
                     {
-                        mushroomVector.elementAt(i).deactivate();
-                        --mushCount;
-                        ++gameScore;
-                        break;
+                        Vec2 mushPos = new Vec2(mushroomVector.elementAt(i).getxPos(), mushroomVector.elementAt(i)
+                                .getyPos());
+                        Vec2 mushDimension = new Vec2(mushroomVector.elementAt(i).getSprite().getSpriteWidth(),
+                                mushroomVector
+                                        .elementAt(i).getSprite().getSpriteHeight());
+
+                        if (CheckCollision(Math.round(mushPos.getX()), Math.round(mushPos.getY()),
+                                Math.round(mushDimension.x), Math.round(mushDimension.y), X, Y, 0, 0))
+                        {
+                            mushroomVector.elementAt(i).deactivate();
+                            --mushCount;
+                            ++gameScore;
+                            break;
+                        }
                     }
                 }
+                break;
+            }
+
+            case MotionEvent.ACTION_UP:
+            {
+                //System.out.println(deltaTime);
+                toDisplay = true;
             }
         }
 
-        return super.onTouchEvent(event);
+        return true;
+        //return super.onTouchEvent(event);
     }
 
     public boolean CheckCollision(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
