@@ -45,4 +45,15 @@ public class Vec2
         this.x = x;
         this.y = y;
     }
+
+    public double length(Vec2 rhs)
+    {
+        double value = this.x * rhs.x + this.y * rhs.y;
+        return Math.sqrt(value);
+    }
+
+    public Vec2 direction(Vec2 target)
+    {
+        return new Vec2(target.x - this.x, target.y = this.y);
+    }
 }

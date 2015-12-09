@@ -31,8 +31,8 @@ public class Mushroom
     public Mushroom()
     {
         this.sprite = new SpriteAnimation();
-        this.xPos = 0.f;
-        this.yPos = 0.f;
+        this.xPos = -2000.f;
+        this.yPos = -2000.f;
 
         this.xDir = 0.f;
         this.yDir = 0.f;
@@ -54,6 +54,9 @@ public class Mushroom
         this.moveSpeed = moveSpeed;
         this.update = false;
         this.render = false;
+
+        this.getSprite().setX(Math.round(xPos));
+        this.getSprite().setY(Math.round(yPos));
     }
 
     public void init(float xpos, float ypos, float xdir, float ydir, MUSH_TYPE type, float moveSpeed)
@@ -66,6 +69,9 @@ public class Mushroom
         this.moveSpeed = moveSpeed;
         this.update = true;
         this.render = true;
+
+        this.getSprite().setX(Math.round(xPos));
+        this.getSprite().setY(Math.round(yPos));
     }
 
     public float getxPos()
@@ -180,6 +186,6 @@ public class Mushroom
         this.render = false;
         this.update = false;
 
-        this.setPos(-200.f, -200.f);
+        this.setPos(-2000.f, -2000.f);
     }
 }
