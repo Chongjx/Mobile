@@ -8,7 +8,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.CountDownTimer;
+import android.os.Vibrator;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -18,13 +20,16 @@ import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Pattern;
 
-public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.Callback{
+public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.Callback
+{
     // Implement this interface to receive information about changes to the surface.
 
     private GameThread myThread = null; // Thread to control the rendering
 
     // 1a) Variables used for background rendering
     private Bitmap bg, scaledbg;
+    private Bitmap cross;
+    private boolean running;
 
     // 1b) Define Screen width and Screen height as integer
     int screenWidth, screenHeight;
@@ -33,6 +38,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private short bgX = 0, bgY = 0;
 
     private int moveSpeed;
+    private float vibrateTimer;
 
     // 4a) bitmap array to stores 4 images of the spaceship
     //private Bitmap[] ship = new Bitmap[4];
@@ -75,6 +81,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     // store the mushrooms
     private Vector<Mushroom> mushroomVector;
     private Vector<Rect> platform;
+
     // store the spawnPosition of the mushroom
     private Vector<Vec2> spawnPosition;
     private int xOffset;
@@ -91,9 +98,12 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     // change rate of the alpha
     private float changeRate;
 
-    //constructor for this GamePanelSurfaceView class
-    public GamePanelSurfaceView (Context context){
+    // Use of vibration for feedback
+    public Vibrator v;
 
+    //constructor for this GamePanelSurfaceView class
+    public GamePanelSurfaceView(Context context)
+    {
         // Context is the current state of the application/object
         super(context);
 
@@ -107,10 +117,14 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         // 1e)load the image when this class is being instantiated
         bg = BitmapFactory.decodeResource(getResources(), R.drawable.level1);
+        cross = BitmapFactory.decodeResource(getResources(), R.drawable.cross);
+        cross = Bitmap.createScaledBitmap(cross, 100, 100, true);
         scaledbg = Bitmap.createScaledBitmap(bg, screenWidth, screenHeight, true);
 
         // Create the game loop thread
         myThread = new GameThread(getHolder(), this);
+
+        Start();
 
         paint.setARGB(255, 0, 0, 0);
         paint.setStrokeWidth(100);
@@ -130,16 +144,17 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         moveSpeed = 5;
 
-        gameSpeed = 20.f;
+        gameSpeed = 30.f;
         gameScore = 0;
         mushCount = 0;
-        xOffset = 200;
+        xOffset = 150;
         deltaTime = 0.f;
         touchTimer = 0.f;
         countDownTimer = 3.f;
         toDisplay = false;
         alphaChange = 0;
         changeRate = 750;
+        vibrateTimer = 0.5f;
 
         // Make the GamePanel focusable so it can handle events
         setFocusable(true);
@@ -147,7 +162,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         //stone_anim = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.flystone), 320, 64,
         //        5, 5);
         //stone_anim = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.badmush), 320, 64,
-                //5, 6);
+        //5, 6);
         //stone_anim.setX(0);
         //stone_anim.setY(600);
 
@@ -162,8 +177,8 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.goodmush), 320, 64,
                     5, 6);
             animationHashMap.put("GOOD", sprite);
-            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.badmush), 320, 64,
-                    5, 6);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.bad), 320, 64,
+                    5, 3);
             animationHashMap.put("BAD", sprite);
             sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.evilmush), 320, 64,
                     5, 5);
@@ -189,15 +204,17 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         int yDivision = screenHeight / 3;
 
         // Create spawn location first
-        spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 1 - yDivision + 30));
+        /*spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 1 - yDivision + 30));
         spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 2 - yDivision + 30));
         spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 3 - yDivision + 30));
         spawnPosition.add(new Vec2(screenWidth + xOffset/2,(yDivision + 5) * 1 - yDivision + 30));
         spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 2 - yDivision + 30));
-        spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 3 - yDivision + 30));
+        spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 3 - yDivision + 30));*/
 
         for (int i = 1; i < 4; ++i)
         {
+            spawnPosition.add(new Vec2(-xOffset, (yDivision + 5) * i - yDivision + 30));
+            spawnPosition.add(new Vec2(screenWidth + xOffset / 2, (yDivision + 5) * i - yDivision + 30));
             platform.add(new Rect(0, yDivision * i - 100, screenWidth, yDivision * i));
         }
 
@@ -216,6 +233,18 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         touch = false;
         miss = false;
+    }
+
+    public void Start()
+    {
+        if (!running)
+        {
+            myThread.start();
+            running = true;
+        } else
+        {
+            myThread.unPause();
+        }
     }
 
     public void spawnMush(Mushroom.MUSH_TYPE type)
@@ -253,9 +282,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 if (mushroomVector.elementAt(i).getxPos() <= -xOffset)
                 {
                     mushroomVector.elementAt(i).setxDir(1);
-                }
-
-                else
+                } else
                 {
                     mushroomVector.elementAt(i).setxDir(-1);
                 }
@@ -266,35 +293,41 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     }
 
     //must implement inherited abstract methods
-    public void surfaceCreated(SurfaceHolder holder){
+    public void surfaceCreated(SurfaceHolder holder)
+    {
         // Create the thread
-        if (!myThread.isAlive()){
+        if (!myThread.isAlive())
+        {
             myThread = new GameThread(getHolder(), this);
             myThread.startRun(true);
             myThread.start();
         }
     }
 
-    public void surfaceDestroyed(SurfaceHolder holder){
+    public void surfaceDestroyed(SurfaceHolder holder)
+    {
         // Destroy the thread
-        if (myThread.isAlive()){
+        if (myThread.isAlive())
+        {
             myThread.startRun(false);
 
 
         }
         boolean retry = true;
-        while (retry) {
-            try {
+        while (retry)
+        {
+            try
+            {
                 myThread.join();
                 retry = false;
-            }
-            catch (InterruptedException e)
+            } catch (InterruptedException e)
             {
             }
         }
     }
 
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height){
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
+    {
 
     }
 
@@ -310,7 +343,8 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         //canvas.drawRect(0, 0, screenWidth, screenHeight, paint);
     }
 
-    public void RenderGameplay(Canvas canvas) {
+    public void RenderGameplay(Canvas canvas)
+    {
         // 2) Re-draw 2nd image after the 1st image ends
         if (canvas == null)
         {
@@ -330,7 +364,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         for (int i = 0; i < mushroomVector.size(); ++i)
         {
-            if(mushroomVector.elementAt(i).getRender() == true)
+            if (mushroomVector.elementAt(i).getRender() == true)
             {
                 mushroomVector.elementAt(i).getSprite().draw(canvas);
             }
@@ -342,8 +376,21 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         canvas.drawText("FPS:" + FPS, 130, 75, paint);
     }
 
+    public void RenderEnd(Canvas canvas)
+    {
+        if (canvas == null)
+        {
+            return;
+        }
+
+        canvas.drawBitmap(cross, mX, mY, null);
+        String msg = String.valueOf(gameScore);
+        canvas.drawText("Your Score: " + msg, screenWidth / 2 - 15 * 25, screenHeight / 2, CDPaint);
+    }
+
     //Update method to update the game play
-    public void update(float dt, float fps){
+    public void update(float dt, float fps)
+    {
         FPS = fps;
         this.deltaTime = dt;
 
@@ -354,8 +401,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 if (countDownTimer > 0)
                 {
                     countDownTimer -= 0.015f;
-                }
-                else
+                } else
                 {
                     alphaChange = 255;
                     GameState = GAME_STATE.STATE_PLAY;
@@ -367,31 +413,23 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 if (gameScore < 10)
                 {
                     moveSpeed = 5;
-                }
-
-                else if (gameScore < 20)
+                } else if (gameScore < 20)
                 {
                     moveSpeed = 7;
-                }
-
-                else if (gameScore < 40)
+                } else if (gameScore < 40)
                 {
                     moveSpeed = 10;
-                }
-
-                else if (gameScore < 80)
+                } else if (gameScore < 80)
                 {
                     moveSpeed = 15;
-                }
-
-                else
+                } else
                 {
                     moveSpeed = 25;
                 }
 
                 if (toDisplay)
                 {
-                   touchTimer += dt;
+                    touchTimer += dt;
                 }
 
                 if (touchTimer > 1.f)
@@ -431,7 +469,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
                 for (int i = 0; i < mushroomVector.size(); ++i)
                 {
-                    if(mushroomVector.elementAt(i).getUpdate() == true)
+                    if (mushroomVector.elementAt(i).getUpdate() == true)
                     {
                         pos.set(mushroomVector.elementAt(i).getxPos(), mushroomVector.elementAt(i).getyPos());
                         vel.set(mushroomVector.elementAt(i).getxDir() * gameSpeed, mushroomVector.elementAt(i)
@@ -442,7 +480,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                         mushroomVector.elementAt(i).setPos(pos.x + dir.x * moveSpeed, pos.y);
 
                         float xPos = mushroomVector.elementAt(i).getxPos();
-                        if (xPos > screenWidth + xOffset/2 || xPos < -xOffset)
+                        if (xPos > screenWidth + xOffset / 2 || xPos < -xOffset)
                         {
                             mushroomVector.elementAt(i).deactivate();
                             --mushCount;
@@ -450,7 +488,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                     }
                 }
 
-                if (mushCount < 3)
+                if (mushCount < 5)
                 {
                     spawnMush(Mushroom.MUSH_TYPE.MUSH_BAD);
                 }
@@ -458,21 +496,31 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 if (miss)
                 {
                     GameState = GAME_STATE.STATE_END;
-                }
 
+                }
                 //stone_anim.update(System.currentTimeMillis());
                 break;
             }
 
             case STATE_END:
             {
+                if (vibrateTimer > 0)
+                {
+                    startVibrate();
+                    vibrateTimer -= 0.015f;
+                }
+
+                else
+                {
+                    stopVibrate();
+                }
                 break;
             }
         }
 
         for (int i = 0; i < mushroomVector.size(); ++i)
         {
-            if(mushroomVector.elementAt(i).getUpdate() == true)
+            if (mushroomVector.elementAt(i).getUpdate() == true)
             {
                 mushroomVector.elementAt(i).getSprite().update(System.currentTimeMillis());
             }
@@ -480,7 +528,8 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     }
 
     // Rendering is done on Canvas
-    public void doDraw(Canvas canvas){
+    public void doDraw(Canvas canvas)
+    {
         switch (GameState)
         {
             case STATE_COUNTDOWN:
@@ -488,17 +537,18 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 RenderGameplay(canvas);
 
                 int time = Math.round(countDownTimer);
-                String msg ="";
+                String msg = "";
                 if (time == 0)
                 {
                     msg += "GO!";
-                }
-                else
+                } else
                 {
                     msg += String.valueOf(Math.round(countDownTimer));
                 }
-
-                canvas.drawText(msg, screenWidth / 2, screenHeight / 2, CDPaint);
+                if (canvas != null)
+                {
+                    canvas.drawText(msg, screenWidth / 2, screenHeight / 2, CDPaint);
+                }
                 break;
             }
 
@@ -506,11 +556,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             {
                 RenderGameplay(canvas);
 
-                //if(touch == false)
-                {
-                    RenderBlank(canvas);
-                }
-
+                RenderBlank(canvas);
                 break;
             }
 
@@ -519,22 +565,21 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 RenderGameplay(canvas);
 
                 // Render overlay
-                canvas.drawRect(new Rect(0, 0, screenWidth, screenHeight), gameOverPaint);
-                String msg = String.valueOf(gameScore);
-                canvas.drawText("Your Score: " + msg, screenWidth / 2 - 15 * 25, screenHeight / 2, CDPaint);
+                RenderEnd(canvas);
                 break;
             }
         }
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event){
+    public boolean onTouchEvent(MotionEvent event)
+    {
 
         // 5) In event of touch on screen, the spaceship will relocate to the point of touch
-        short X = (short)event.getX();
-        short Y = (short)event.getY();
+        short X = (short) event.getX();
+        short Y = (short) event.getY();
 
-        switch(event.getAction())
+        switch (event.getAction())
         {
             case MotionEvent.ACTION_DOWN:
             {
@@ -543,6 +588,9 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 {
                     miss = true;
                     alphaChange = 0;
+
+                    mX = X;
+                    mY = Y;
 
                     for (int i = 0; i < mushroomVector.size(); ++i)
                     {
@@ -570,6 +618,11 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 break;
             }
 
+            case MotionEvent.ACTION_MOVE:
+            {
+
+            }
+
             case MotionEvent.ACTION_UP:
             {
                 toDisplay = true;
@@ -584,7 +637,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     {
         if (x2 >= x1 && x2 <= x1 + w1)  // start to detect collision of the top left corner
         {
-            if(y2 >= y1 && y2 <= y1 + h1)
+            if (y2 >= y1 && y2 <= y1 + h1)
                 return true;
         }
 
@@ -606,6 +659,18 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 return true;
         }
 
-        return  false;
+        return false;
+    }
+
+    public void startVibrate()
+    {
+        long pattern[] = {0, 200, 500};
+        v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+        v.vibrate(pattern, 0);
+    }
+
+    public void stopVibrate()
+    {
+        v.cancel();
     }
 }
