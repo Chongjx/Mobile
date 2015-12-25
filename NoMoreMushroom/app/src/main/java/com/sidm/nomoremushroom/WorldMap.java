@@ -47,17 +47,17 @@ public class WorldMap extends Activity implements OnClickListener
 
         if (v == btn_play1)
         {
-            intent.setClass(this, Gamepage.class);
+            intent.setClass(this, GameLevel1.class);
         }
 
         else if (v == btn_play2)
         {
-            intent.setClass(this, Gamepage.class);
+            intent.setClass(this, GameLevel2.class);
         }
 
         else if (v == btn_play3)
         {
-            intent.setClass(this, Gamepage.class);
+            intent.setClass(this, GameLevel3.class);
         }
 
         else if (v == btn_options)

@@ -10,17 +10,13 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
-import android.os.CountDownTimer;
 import android.os.Vibrator;
 import android.text.InputFilter;
 import android.text.InputType;
-import android.text.Spanned;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -87,12 +83,10 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private GAME_STATE GameState;
 
     // check if the screen is touched
-    private boolean touch;
     private boolean miss;
 
     // store the mushrooms
-    private Vector<Mushroom> mushroomVector;
-    private Vector<Rect> platform;
+    private Vector<Monster> monsterVector;
 
     // store the spawnPosition of the mushroom
     private Vector<Vec2> spawnPosition;
@@ -100,8 +94,10 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private float gameSpeed;
     private HashMap<String, SpriteAnimation> animationHashMap;
 
+    private int level;
     private int gameScore;
     private int mushCount;
+    private int maxMon;
 
     private float touchTimer;
     private float countDownTimer;
@@ -125,7 +121,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private Alert AlertObj;
 
     //constructor for this GamePanelSurfaceView class
-    public GamePanelSurfaceView(Context context, Activity activity)
+    public GamePanelSurfaceView(Context context, Activity activity, int level)
     {
         // Context is the current state of the application/object
         super(context);
@@ -142,17 +138,18 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         screenHeight = metrics.heightPixels;
 
         // 1e)load the image when this class is being instantiated
-        bg = BitmapFactory.decodeResource(getResources(), R.drawable.level1);
+        bg = BitmapFactory.decodeResource(getResources(), R.drawable.worldmap);
         cross = BitmapFactory.decodeResource(getResources(), R.drawable.cross);
         cross = Bitmap.createScaledBitmap(cross, 100, 100, true);
         scaledbg = Bitmap.createScaledBitmap(bg, screenWidth, screenHeight, true);
 
         // Create the game loop thread
-        bgm = MediaPlayer.create(context, R.raw.background_music);
+        bgm = MediaPlayer.create(context, R.raw.forest);
         myThread = new GameThread(getHolder(), this);
 
         Start();
 
+        this.level = level;
         paint.setARGB(255, 0, 0, 0);
         paint.setStrokeWidth(100);
         paint.setTextSize(30);
@@ -169,11 +166,12 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         GameState = GAME_STATE.STATE_COUNTDOWN;
 
-        moveSpeed = 5;
+        moveSpeed = 0;
 
         gameSpeed = 30.f;
         gameScore = 0;
         mushCount = 0;
+        maxMon = 3;
         xOffset = 150;
         deltaTime = 0.f;
         touchTimer = 0.f;
@@ -194,42 +192,48 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         //stone_anim.setY(600);
 
         animationHashMap = new HashMap<String, SpriteAnimation>();
-        mushroomVector = new Vector<Mushroom>();
+        monsterVector = new Vector<Monster>();
         spawnPosition = new Vector<Vec2>();
-        platform = new Vector<Rect>();
 
         // Create all the sprite animations and store them into the hashmap
         {
             SpriteAnimation sprite;
-            //sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.goodmush), 320, 64,
-            //        5, 6);
-            //animationHashMap.put("GOOD", sprite);
-            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.bad), 320, 64,
-                    5, 3);
-            animationHashMap.put("BAD", sprite);
-            //sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.evilmush), 320, 64,
-            //5, 5);
-            //animationHashMap.put("EVIL", sprite);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.zombie_left), 320, 64,
+                    7, 5);
+            animationHashMap.put("ZOMBIELEFT", sprite);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.zombie_right), 320, 64,
+                    7, 5);
+            animationHashMap.put("ZOMBIERIGHT", sprite);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.raven_left), 320, 64,
+                    5, 6);
+            animationHashMap.put("RAVENLEFT", sprite);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.raven_right), 320, 64,
+                    5, 6);
+            animationHashMap.put("RAVENRIGHT", sprite);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.snail_left), 320, 64,
+                    5, 8);
+            animationHashMap.put("SNAILLEFT", sprite);
+            sprite = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.snail_right), 320, 64,
+                    5, 8);
+            animationHashMap.put("SNAILRIGHT", sprite);
         }
 
         // add 10 mush into the vector first
         for (int i = 0; i < 10; ++i)
         {
-            Mushroom mush = new Mushroom();
-            mush.setSprite(animationHashMap.get("BAD"));
-            mush.setUpdate(false);
-            mush.setRender(false);
-            mushroomVector.add(mush);
+            Monster mon = new Monster();
+            mon.setUpdate(false);
+            mon.setRender(false);
+            monsterVector.add(mon);
         }
 
-        Vec2 maxStart = new Vec2();
+        /*Vec2 maxStart = new Vec2();
         maxStart.set(1, 2);
 
         Vec2 minStart = new Vec2();
         minStart.set(0, 0);
 
-        int yDivision = screenHeight / 3;
-
+        //int yDivision = screenHeight / 2;
         // Create spawn location first
         /*spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 1 - yDivision + 30));
         spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 2 - yDivision + 30));
@@ -238,27 +242,47 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 2 - yDivision + 30));
         spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 3 - yDivision + 30));*/
 
-        for (int i = 1; i < 4; ++i)
+        /*for (int i = 1; i < 3; ++i)
         {
-            spawnPosition.add(new Vec2(-xOffset, (yDivision + 5) * i - yDivision + 30));
-            spawnPosition.add(new Vec2(screenWidth + xOffset / 2, (yDivision + 5) * i - yDivision + 30));
-            platform.add(new Rect(0, yDivision * i - 100, screenWidth, yDivision * i));
-        }
+            spawnPosition.add(new Vec2(-xOffset, (yDivision) * (i - 1) + 75));
+            spawnPosition.add(new Vec2(screenWidth + xOffset / 2, (yDivision) * (i - 1) + 75));
+        }*/
+
+        int yHeight = 125;
+        // bottom left
+        spawnPosition.add(new Vec2(-xOffset, screenHeight - yHeight));
+        // bottom right
+        spawnPosition.add(new Vec2(screenWidth + xOffset / 2, screenHeight - yHeight));
+        // top left
+        spawnPosition.add(new Vec2(-xOffset, 100));
+        // top right
+        spawnPosition.add(new Vec2(screenWidth + xOffset / 2, 100));
 
         // spawn 2 mush first
-        for (int i = 0; i < mushroomVector.size() && mushCount < 2; ++i)
+        for (int i = 0; i < monsterVector.size() && mushCount < 2; ++i)
         {
-            if (mushroomVector.elementAt(i).getRender() == false)
+            if (monsterVector.elementAt(i).getRender() == false)
             {
-                int spawnIndex = rand.nextInt(6);
-                mushroomVector.elementAt(i).setSprite(animationHashMap.get("BAD"));
-                mushroomVector.elementAt(i).init(rand.nextInt((screenWidth - 100) + 1), spawnPosition.elementAt
-                        (spawnIndex).y, 0, 0, Mushroom.MUSH_TYPE.MUSH_BAD, 5.f);
+                int spawnIndex = rand.nextInt(2);
+
+                int spriteHeight = animationHashMap.get("ZOMBIERIGHT").getSpriteHeight();
+
+                if (spawnPosition.elementAt(spawnIndex).x <= -xOffset)
+                {
+                    monsterVector.elementAt(i).setSprite(animationHashMap.get("ZOMBIERIGHT"));
+                }
+
+                else
+                {
+                    monsterVector.elementAt(i).setSprite(animationHashMap.get("ZOMBIELEFT"));
+                }
+
+                monsterVector.elementAt(i).init(rand.nextInt((screenWidth - 100) + 1), spawnPosition.elementAt
+                        (spawnIndex).y - spriteHeight, 0, 0, Monster.MON_TYPE.MON_ZOMBIE, 5.f);
                 ++mushCount;
             }
         }
 
-        touch = false;
         miss = false;
 
         sounds = new SoundPool(3, AudioManager.STREAM_MUSIC, 0);
@@ -309,45 +333,75 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         }
     }
 
-    public void spawnMush(Mushroom.MUSH_TYPE type)
+    public void spawnMush(Monster.MON_TYPE type)
     {
-        for (int i = 0; i < mushroomVector.size(); ++i)
+        for (int i = 0; i < monsterVector.size(); ++i)
         {
-            if (mushroomVector.elementAt(i).getRender() == false)
+            if (monsterVector.elementAt(i).getRender() == false)
             {
-                int spawnIndex = rand.nextInt(6);
-                switch (type)
+                int spawnIndex = spawnIndex = rand.nextInt(2);
+
+                // if spawning land monster
+                if (type == Monster.MON_TYPE.MON_RAVEN)
                 {
-                    case MUSH_GOOD:
-                    {
-                        mushroomVector.elementAt(i).setSprite(animationHashMap.get("GOOD"));
-                        mushroomVector.elementAt(i).init(spawnPosition.elementAt(spawnIndex).x, spawnPosition.elementAt
-                                (spawnIndex).y, 0, 0, Mushroom.MUSH_TYPE.MUSH_GOOD, 5.f);
-                        break;
-                    }
-                    case MUSH_BAD:
-                    {
-                        mushroomVector.elementAt(i).setSprite(animationHashMap.get("BAD"));
-                        mushroomVector.elementAt(i).init(spawnPosition.elementAt(spawnIndex).x, spawnPosition.elementAt
-                                (spawnIndex).y, 0, 0, Mushroom.MUSH_TYPE.MUSH_BAD, 5.f);
-                        break;
-                    }
-                    case MUSH_EVIL:
-                    {
-                        mushroomVector.elementAt(i).setSprite(animationHashMap.get("EVIL"));
-                        mushroomVector.elementAt(i).init(spawnPosition.elementAt(spawnIndex).x, spawnPosition.elementAt
-                                (spawnIndex).y, 0, 0, Mushroom.MUSH_TYPE.MUSH_EVIL, 5.f);
-                        break;
-                    }
+                    spawnIndex += 2;
                 }
 
-                if (mushroomVector.elementAt(i).getxPos() <= -xOffset)
+                int spriteHeight = 0;
+                if (spawnPosition.elementAt(spawnIndex).x <= -xOffset)
                 {
-                    mushroomVector.elementAt(i).setxDir(1);
-                } else
-                {
-                    mushroomVector.elementAt(i).setxDir(-1);
+                    switch (type)
+                    {
+                        case MON_ZOMBIE:
+                        {
+                            monsterVector.elementAt(i).setSprite(animationHashMap.get("ZOMBIERIGHT"));
+                            spriteHeight = animationHashMap.get("ZOMBIERIGHT").getSpriteHeight();
+                            break;
+                        }
+                        case MON_RAVEN:
+                        {
+                            monsterVector.elementAt(i).setSprite(animationHashMap.get("RAVENRIGHT"));
+                            break;
+                        }
+                        case MON_SNAIL:
+                        {
+                            monsterVector.elementAt(i).setSprite(animationHashMap.get("SNAILRIGHT"));
+                            spriteHeight = animationHashMap.get("SNAILRIGHT").getSpriteHeight();
+                            break;
+                        }
+                    }
+
+                    monsterVector.elementAt(i).init(spawnPosition.elementAt(spawnIndex).x, spawnPosition.elementAt
+                            (spawnIndex).y - spriteHeight, 1, 0, type, 5.f);
                 }
+                else
+                {
+                    switch (type)
+                    {
+                        case MON_ZOMBIE:
+                        {
+                            monsterVector.elementAt(i).setSprite(animationHashMap.get("ZOMBIELEFT"));
+                            spriteHeight = animationHashMap.get("ZOMBIELEFT").getSpriteHeight();
+                            break;
+                        }
+                        case MON_RAVEN:
+                        {
+                            monsterVector.elementAt(i).setSprite(animationHashMap.get("RAVENLEFT"));
+                            break;
+                        }
+                        case MON_SNAIL:
+                        {
+                            monsterVector.elementAt(i).setSprite(animationHashMap.get("SNAILLEFT"));
+                            spriteHeight = animationHashMap.get("SNAILLEFT").getSpriteHeight();
+                            break;
+                        }
+                    }
+
+                    monsterVector.elementAt(i).init(spawnPosition.elementAt(spawnIndex).x, spawnPosition.elementAt
+                            (spawnIndex).y - spriteHeight, -1, 0, type, 5.f);
+                }
+
+
                 ++mushCount;
                 break;
             }
@@ -419,23 +473,23 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         {
             return;
         }
-        canvas.drawARGB(255, 255, 255, 255);
-        //canvas.drawBitmap(scaledbg, bgX, bgY, null);
+        //canvas.drawARGB(255, 255, 255, 255);
+        canvas.drawBitmap(scaledbg, bgX, bgY, null);
         //canvas.drawBitmap(scaledbg, bgX + screenWidth, bgY, null);
 
-        for (int i = 0; i < platform.size(); ++i)
-        {
-            canvas.drawRect(platform.elementAt(i), RectPaint);
-        }
+        //for (int i = 0; i < platform.size(); ++i)
+        //{
+        //    canvas.drawRect(platform.elementAt(i), RectPaint);
+        //}
 
         // 4d) Draw the spaceships
         //canvas.drawBitmap(ship[frame], mX, mY, null);
 
-        for (int i = 0; i < mushroomVector.size(); ++i)
+        for (int i = 0; i < monsterVector.size(); ++i)
         {
-            if (mushroomVector.elementAt(i).getRender() == true)
+            if (monsterVector.elementAt(i).getRender() == true)
             {
-                mushroomVector.elementAt(i).getSprite().draw(canvas);
+                monsterVector.elementAt(i).getSprite().draw(canvas);
             }
         }
 
@@ -452,7 +506,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             return;
         }
 
-        canvas.drawBitmap(cross, mX, mY, null);
+        canvas.drawBitmap(cross, mX - cross.getWidth() * 0.5f, mY - cross.getHeight()* 0.5f, null);
         String msg = String.valueOf(gameScore);
         canvas.drawText("Your Score: " + msg, screenWidth / 2 - 15 * 25, screenHeight / 2, CDPaint);
     }
@@ -512,7 +566,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
                 if (touchTimer > 1.f)
                 {
-                    touch = false;
                     toDisplay = false;
                     touchTimer = 0.f;
                 }
@@ -545,30 +598,60 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 Vec2 pos = new Vec2();
                 Vec2 dir = new Vec2();
 
-                for (int i = 0; i < mushroomVector.size(); ++i)
+                for (int i = 0; i < monsterVector.size(); ++i)
                 {
-                    if (mushroomVector.elementAt(i).getUpdate() == true)
+                    if (monsterVector.elementAt(i).getUpdate() == true)
                     {
-                        pos.set(mushroomVector.elementAt(i).getxPos(), mushroomVector.elementAt(i).getyPos());
-                        vel.set(mushroomVector.elementAt(i).getxDir() * gameSpeed, mushroomVector.elementAt(i)
+                        pos.set(monsterVector.elementAt(i).getxPos(), monsterVector.elementAt(i).getyPos());
+                        vel.set(monsterVector.elementAt(i).getxDir() * gameSpeed, monsterVector.elementAt(i)
                                 .getyDir() * gameSpeed);
-                        dir.set(mushroomVector.elementAt(i).getxDir(), mushroomVector.elementAt(i)
+                        dir.set(monsterVector.elementAt(i).getxDir(), monsterVector.elementAt(i)
                                 .getyDir());
 
-                        mushroomVector.elementAt(i).setPos(pos.x + dir.x * moveSpeed, pos.y);
+                        monsterVector.elementAt(i).setPos(pos.x + dir.x * moveSpeed, pos.y);
 
-                        float xPos = mushroomVector.elementAt(i).getxPos();
+                        float xPos = monsterVector.elementAt(i).getxPos();
                         if (xPos > screenWidth + xOffset / 2 || xPos < -xOffset)
                         {
-                            mushroomVector.elementAt(i).deactivate();
+                            monsterVector.elementAt(i).deactivate();
                             --mushCount;
                         }
                     }
                 }
 
-                if (mushCount < 5)
+                if (mushCount < maxMon)
                 {
-                    spawnMush(Mushroom.MUSH_TYPE.MUSH_BAD);
+                    // rand to spawn diff type
+
+                    if (level == 1)
+                    {
+                        spawnMush(Monster.MON_TYPE.MON_ZOMBIE);
+                    }
+
+                    else if (level == 2)
+                    {
+                        int chooseSpawn = rand.nextInt(6);
+
+                        if (chooseSpawn <= 3)
+                            spawnMush(Monster.MON_TYPE.MON_ZOMBIE);
+
+                        else
+                            spawnMush(Monster.MON_TYPE.MON_RAVEN);
+                    }
+
+                    else if (level == 3)
+                    {
+                        int chooseSpawn = rand.nextInt(10);
+
+                        if (chooseSpawn <= 4)
+                            spawnMush(Monster.MON_TYPE.MON_ZOMBIE);
+
+                        else if (chooseSpawn <= 7)
+                            spawnMush(Monster.MON_TYPE.MON_RAVEN);
+
+                        else
+                            spawnMush(Monster.MON_TYPE.MON_SNAIL);
+                    }
                 }
 
                 if (miss)
@@ -597,11 +680,11 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             }
         }
 
-        for (int i = 0; i < mushroomVector.size(); ++i)
+        for (int i = 0; i < monsterVector.size(); ++i)
         {
-            if (mushroomVector.elementAt(i).getUpdate() == true)
+            if (monsterVector.elementAt(i).getUpdate() == true)
             {
-                mushroomVector.elementAt(i).getSprite().update(System.currentTimeMillis());
+                monsterVector.elementAt(i).getSprite().update(System.currentTimeMillis());
             }
         }
     }
@@ -653,7 +736,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     @Override
     public boolean onTouchEvent(MotionEvent event)
     {
-
         // 5) In event of touch on screen, the spaceship will relocate to the point of touch
         short X = (short) event.getX();
         short Y = (short) event.getY();
@@ -662,7 +744,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         {
             case MotionEvent.ACTION_DOWN:
             {
-                touch = true;
                 if (GameState == GAME_STATE.STATE_PLAY)
                 {
                     miss = true;
@@ -671,23 +752,34 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                     mX = X;
                     mY = Y;
 
-                    for (int i = 0; i < mushroomVector.size(); ++i)
+                    for (int i = 0; i < monsterVector.size(); ++i)
                     {
-                        if (mushroomVector.elementAt(i).getRender() == true)
+                        if (monsterVector.elementAt(i).getRender() == true)
                         {
-                            Vec2 mushPos = new Vec2(mushroomVector.elementAt(i).getxPos(), mushroomVector.elementAt(i)
+                            Vec2 mushPos = new Vec2(monsterVector.elementAt(i).getxPos(), monsterVector.elementAt(i)
                                     .getyPos());
-                            Vec2 mushDimension = new Vec2(mushroomVector.elementAt(i).getSprite().getSpriteWidth(),
-                                    mushroomVector
+                            Vec2 mushDimension = new Vec2(monsterVector.elementAt(i).getSprite().getSpriteWidth(),
+                                    monsterVector
                                             .elementAt(i).getSprite().getSpriteHeight());
 
                             if (CheckCollision(Math.round(mushPos.getX()), Math.round(mushPos.getY()),
                                     Math.round(mushDimension.x), Math.round(mushDimension.y), X, Y, 0, 0))
                             {
 
-                                mushroomVector.elementAt(i).deactivate();
+                                switch(monsterVector.elementAt(i).getType())
+                                {
+                                    case MON_ZOMBIE:
+                                        gameScore += 1;
+                                    case MON_RAVEN:
+                                        gameScore += 2;
+                                        break;
+                                    case MON_SNAIL:
+                                        gameScore += 3;
+                                        break;
+                                }
+                                monsterVector.elementAt(i).deactivate();
                                 --mushCount;
-                                ++gameScore;
+
                                 miss = false;
                                 sounds.play(soundCorrect, 1.0f, 1.0f, 0, 0, 2.f);
                                 break;

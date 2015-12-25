@@ -3,13 +3,13 @@ package com.sidm.nomoremushroom;
 /**
  * Created by Jun Xiang on 6/12/2015.
  */
-public class Mushroom
+public class Monster
 {
-    enum MUSH_TYPE
+    enum MON_TYPE
     {
-        MUSH_GOOD,
-        MUSH_BAD,
-        MUSH_EVIL,
+        MON_ZOMBIE,
+        MON_RAVEN,
+        MON_SNAIL,
         MUSH_MAX
     };
 
@@ -21,14 +21,14 @@ public class Mushroom
 
     private float moveSpeed;
 
-    private MUSH_TYPE type;
+    private MON_TYPE type;
 
     private SpriteAnimation sprite;
 
     private boolean update;
     private boolean render;
 
-    public Mushroom()
+    public Monster()
     {
         this.sprite = new SpriteAnimation();
         this.xPos = -2000.f;
@@ -38,13 +38,13 @@ public class Mushroom
         this.yDir = 0.f;
 
         this.moveSpeed = 5.f;
-        this.type = MUSH_TYPE.MUSH_GOOD;
+        this.type = MON_TYPE.MON_ZOMBIE;
 
         this.update = false;
         this.render = false;
     }
 
-    public Mushroom(float xpos, float ypos, float xdir, float ydir, MUSH_TYPE type, float moveSpeed)
+    public Monster(float xpos, float ypos, float xdir, float ydir, MON_TYPE type, float moveSpeed)
     {
         this.xPos = xpos;
         this.yPos = ypos;
@@ -59,7 +59,7 @@ public class Mushroom
         this.getSprite().setY(Math.round(yPos));
     }
 
-    public void init(float xpos, float ypos, float xdir, float ydir, MUSH_TYPE type, float moveSpeed)
+    public void init(float xpos, float ypos, float xdir, float ydir, MON_TYPE type, float moveSpeed)
     {
         this.xPos = xpos;
         this.yPos = ypos;
@@ -141,12 +141,12 @@ public class Mushroom
         this.moveSpeed = moveSpeed;
     }
 
-    public MUSH_TYPE getType()
+    public MON_TYPE getType()
     {
         return type;
     }
 
-    public void setType(MUSH_TYPE type)
+    public void setType(MON_TYPE type)
     {
         this.type = type;
     }

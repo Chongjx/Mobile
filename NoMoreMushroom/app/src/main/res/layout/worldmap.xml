@@ -6,28 +6,27 @@
 
     <Button
         android:id = "@+id/btn_play1"
-        android:layout_width="200dp"
+        android:layout_width="190dp"
         android:layout_height="70dp"
         android:background="@drawable/level1select"
-        android:layout_above="@+id/btn_play2"
-        android:layout_centerHorizontal="true"/>
+        android:layout_alignTop="@+id/btn_play2"
+        android:layout_alignParentStart="true"/>
 
     <Button
         android:id = "@+id/btn_play2"
-        android:layout_width="200dp"
+        android:layout_width="190dp"
         android:layout_height="70dp"
         android:background="@drawable/level2select"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true"
-        android:layout_alignStart="@+id/btn_play1"/>
+        android:layout_below="@+id/btn_options"
+        android:layout_centerHorizontal="true"/>
 
     <Button
         android:id = "@+id/btn_play3"
-        android:layout_width="200dp"
+        android:layout_width="190dp"
         android:layout_height="70dp"
         android:background="@drawable/level3select"
-        android:layout_below="@+id/btn_play2"
-        android:layout_alignStart="@+id/btn_play1"/>
+        android:layout_alignTop="@+id/btn_play2"
+        android:layout_alignParentEnd="true"/>
 
     <Button
         android:id = "@+id/btn_options"

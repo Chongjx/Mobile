@@ -41,7 +41,27 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".Gamepage"
+        <activity android:name=".GameLevel1"
+                  android:screenOrientation="landscape">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.default" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".GameLevel2"
+                  android:screenOrientation="landscape">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.default" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".GameLevel3"
                   android:screenOrientation="landscape">
 
             <intent-filter>

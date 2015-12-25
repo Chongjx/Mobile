@@ -9,6 +9,7 @@ import android.graphics.Rect;
  */
 public class SpriteAnimation
 {
+    boolean play;
     private Bitmap bitmap;      // the animation sequence
     private Rect sourceRect;    // the rectangle to be drawn from the animation bitmap
     private int frame;          // number of frames in animation

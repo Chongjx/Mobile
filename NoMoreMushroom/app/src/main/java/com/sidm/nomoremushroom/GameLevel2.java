@@ -6,9 +6,9 @@ import android.view.Window;
 import android.view.WindowManager;
 
 /**
- * Created by Jun Xiang on 25/11/2015.
+ * Created by Jun Xiang on 24/12/2015.
  */
-public class Gamepage extends Activity
+public class GameLevel2 extends Activity
 {
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -18,6 +18,6 @@ public class Gamepage extends Activity
         requestWindowFeature(Window.FEATURE_NO_TITLE);// hide title
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN); //hide top bar
 
-        setContentView(new GamePanelSurfaceView(this, this));
+        setContentView(new GamePanelSurfaceView(this, this, 2));
     }
 }
