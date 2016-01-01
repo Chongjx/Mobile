@@ -121,7 +121,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private Alert AlertObj;
 
     //constructor for this GamePanelSurfaceView class
-    public GamePanelSurfaceView(Context context, Activity activity, int level)
+    public GamePanelSurfaceView(Context context, final Activity activity, int level)
     {
         // Context is the current state of the application/object
         super(context);
@@ -248,7 +248,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             spawnPosition.add(new Vec2(screenWidth + xOffset / 2, (yDivision) * (i - 1) + 75));
         }*/
 
-        int yHeight = 125;
+        int yHeight = 175;
         // bottom left
         spawnPosition.add(new Vec2(-xOffset, screenHeight - yHeight));
         // bottom right
@@ -316,6 +316,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             {
                 Intent intent = new Intent();
                 intent.setClass(getContext(), WorldMap.class);
+                activityTracker.finish();
                 activityTracker.startActivity(intent);
             }
         });
@@ -418,6 +419,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             myThread.startRun(true);
             myThread.start();
         }
+
         bgm.setVolume(0.8f, 0.8f);
         bgm.start();
     }
@@ -770,6 +772,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                                 {
                                     case MON_ZOMBIE:
                                         gameScore += 1;
+                                        break;
                                     case MON_RAVEN:
                                         gameScore += 2;
                                         break;
