@@ -17,7 +17,7 @@ public class Alert
 
     public void RunAlert()
     {
-        Handler handler = new Handler(Looper.getMainLooper());
+        /*Handler handler = new Handler(Looper.getMainLooper());
 
         handler.postDelayed(new Runnable()
         {
@@ -26,6 +26,6 @@ public class Alert
             {
                 Game.alert.show();
             }
-        }, 1000);
+        }, 1000);*/
     }
 }

@@ -5,11 +5,14 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
@@ -21,12 +24,11 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import java.util.HashMap;
 import java.util.Random;
 import java.util.Vector;
-import java.util.logging.Filter;
-import java.util.regex.Pattern;
 
 public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.Callback
 {
@@ -38,6 +40,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private Bitmap bg, scaledbg;
     private Bitmap cross;
     private boolean running;
+    private GameButton ok;
 
     // 1b) Define Screen width and Screen height as integer
     int screenWidth, screenHeight;
@@ -58,8 +61,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     // create paint to paint on canvas
     Paint paint = new Paint();
     Paint CDPaint = new Paint();
-    Paint RectPaint = new Paint();
-    Paint gameOverPaint = new Paint();
     // create rand and seed it
     Random rand = new Random(System.currentTimeMillis());
 
@@ -96,6 +97,13 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
     private int level;
     private int gameScore;
+    private int lastScore;
+    SharedPreferences sharePrefScore;
+    private boolean playBGM;
+    private boolean playEffects;
+    SharedPreferences settings;
+    Editor editor;
+
     private int mushCount;
     private int maxMon;
 
@@ -114,14 +122,16 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
     private SoundPool sounds;
     private int soundCorrect, soundWrong;
 
-    public boolean showAlert = false;
-    AlertDialog.Builder alert = null;
+    Typeface font;
+
+    /*public boolean showAlert = false;
+    AlertDialog.Builder alert = null;*/
     Activity activityTracker;
-    public boolean showed = false;
-    private Alert AlertObj;
+    /*public boolean showed = false;
+    private Alert AlertObj;*/
 
     //constructor for this GamePanelSurfaceView class
-    public GamePanelSurfaceView(Context context, final Activity activity, int level)
+    public GamePanelSurfaceView(Context context, Activity activity, int level)
     {
         // Context is the current state of the application/object
         super(context);
@@ -146,25 +156,18 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         // Create the game loop thread
         bgm = MediaPlayer.create(context, R.raw.forest);
         myThread = new GameThread(getHolder(), this);
-
-        Start();
+        GameState = GAME_STATE.STATE_COUNTDOWN;
 
         this.level = level;
         paint.setARGB(255, 0, 0, 0);
         paint.setStrokeWidth(100);
         paint.setTextSize(30);
 
-        CDPaint.setARGB(255, 0, 0, 0);
         CDPaint.setStrokeWidth(100);
-        CDPaint.setTextSize(120);
+        CDPaint.setTextSize(150);
         CDPaint.setColor(Color.RED);
-
-        RectPaint.setStyle(Paint.Style.FILL_AND_STROKE);
-        RectPaint.setColor(Color.GRAY);
-
-        gameOverPaint.setColor(Color.argb(125, 125, 125, 125));
-
-        GameState = GAME_STATE.STATE_COUNTDOWN;
+        font = Typeface.createFromAsset(getContext().getAssets(), "fonts/Deanna.ttf");
+        CDPaint.setTypeface(font);
 
         moveSpeed = 0;
 
@@ -183,13 +186,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
         // Make the GamePanel focusable so it can handle events
         setFocusable(true);
-
-        //stone_anim = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.flystone), 320, 64,
-        //        5, 5);
-        //stone_anim = new SpriteAnimation(BitmapFactory.decodeResource(getResources(), R.drawable.badmush), 320, 64,
-        //5, 6);
-        //stone_anim.setX(0);
-        //stone_anim.setY(600);
 
         animationHashMap = new HashMap<String, SpriteAnimation>();
         monsterVector = new Vector<Monster>();
@@ -226,27 +222,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             mon.setRender(false);
             monsterVector.add(mon);
         }
-
-        /*Vec2 maxStart = new Vec2();
-        maxStart.set(1, 2);
-
-        Vec2 minStart = new Vec2();
-        minStart.set(0, 0);
-
-        //int yDivision = screenHeight / 2;
-        // Create spawn location first
-        /*spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 1 - yDivision + 30));
-        spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 2 - yDivision + 30));
-        spawnPosition.add(new Vec2(-xOffset,               (yDivision + 5) * 3 - yDivision + 30));
-        spawnPosition.add(new Vec2(screenWidth + xOffset/2,(yDivision + 5) * 1 - yDivision + 30));
-        spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 2 - yDivision + 30));
-        spawnPosition.add(new Vec2(screenWidth + xOffset/2, (yDivision + 5) * 3 - yDivision + 30));*/
-
-        /*for (int i = 1; i < 3; ++i)
-        {
-            spawnPosition.add(new Vec2(-xOffset, (yDivision) * (i - 1) + 75));
-            spawnPosition.add(new Vec2(screenWidth + xOffset / 2, (yDivision) * (i - 1) + 75));
-        }*/
 
         int yHeight = 175;
         // bottom left
@@ -286,30 +261,58 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         miss = false;
 
         sounds = new SoundPool(3, AudioManager.STREAM_MUSIC, 0);
-        soundCorrect = sounds.load(context, R.raw.correct, 1);
+        soundCorrect = sounds.load(context, R.raw.fire, 1);
         soundWrong = sounds.load(context, R.raw.incorrect, 1);
 
+        ok = new GameButton();
+        ok.setPos(new Vec2(screenWidth * 0.5f, screenHeight * 0.5f));
+        ok.setTexture(BitmapFactory.decodeResource(getResources(), R.drawable.ok));
+
+        // Load shared pref
+        sharePrefScore = getContext().getSharedPreferences("highscore", Context.MODE_PRIVATE);
+        editor = sharePrefScore.edit();
+
+        switch (level)
+        {
+            case 1:
+                lastScore = sharePrefScore.getInt("level1highscore", 0);
+                break;
+            case 2:
+                lastScore = sharePrefScore.getInt("level2highscore", 0);
+                break;
+            case 3:
+                lastScore = sharePrefScore.getInt("level3highscore", 0);
+                break;
+        }
+
+        Start();
+
+        settings = getContext().getSharedPreferences("setting", Context.MODE_PRIVATE);
+        playBGM = settings.getBoolean("music", true);
+        playEffects = settings.getBoolean("sfx", true);
+
         // create alert dialog
-        AlertObj = new Alert(this);
-        alert = new AlertDialog.Builder(getContext());
+        //AlertObj = new Alert(this);
+        //alert = new AlertDialog.Builder(getContext());
 
         // Allow players to input their name
-        final EditText input = new EditText(getContext());
+        //final EditText input = new EditText(getContext());
 
         // Define the input method where 'enter' key is disabled
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        //input.setInputType(InputType.TYPE_CLASS_TEXT);
 
         // Define max of 20 characters to be entered for 'Name' field
-        int maxLength = 20;
+        /*int maxLength = 20;
         InputFilter[] FilterArray = new InputFilter[1];
         FilterArray[0] = new InputFilter.LengthFilter(maxLength);
-        input.setFilters(FilterArray);
+        input.setFilters(FilterArray);*/
 
         // setup the alert dialog
-        alert.setCancelable(false);
-        alert.setView(input);
+        //alert.setCancelable(false);
+        //alert.setView(input);
 
-        alert.setPositiveButton("OK", new DialogInterface.OnClickListener()
+
+        /*alert.setPositiveButton("OK", new DialogInterface.OnClickListener()
         {
             // do something when the button is clicked
             public void onClick(DialogInterface arg0, int arg1)
@@ -319,7 +322,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                 activityTracker.finish();
                 activityTracker.startActivity(intent);
             }
-        });
+        });*/
     }
 
     public void Start()
@@ -420,8 +423,10 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             myThread.start();
         }
 
-        bgm.setVolume(0.8f, 0.8f);
-        bgm.start();
+        if (playBGM)
+        {
+            bgm.start();
+        }
     }
 
     public void surfaceDestroyed(SurfaceHolder holder)
@@ -443,8 +448,13 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             }
         }
 
-        bgm.stop();
+        if (playBGM)
+        {
+            bgm.stop();
+        }
+
         bgm.release();
+        bgm = null;
 
         sounds.unload(soundCorrect);
         sounds.unload(soundWrong);
@@ -453,7 +463,6 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
     {
-
     }
 
     public void RenderBlank(Canvas canvas)
@@ -475,7 +484,7 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         {
             return;
         }
-        //canvas.drawARGB(255, 255, 255, 255);
+
         canvas.drawBitmap(scaledbg, bgX, bgY, null);
         //canvas.drawBitmap(scaledbg, bgX + screenWidth, bgY, null);
 
@@ -508,7 +517,10 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             return;
         }
 
+        canvas.drawARGB(128, 255, 255, 255);
         canvas.drawBitmap(cross, mX - cross.getWidth() * 0.5f, mY - cross.getHeight()* 0.5f, null);
+        canvas.drawBitmap(ok.getTexture(), ok.getPos().getX() - ok.getTexture().getWidth() * 0.5f, ok.getPos().getY(),
+                null);
         String msg = String.valueOf(gameScore);
         canvas.drawText("Your Score: " + msg, screenWidth / 2 - 15 * 25, screenHeight / 2, CDPaint);
     }
@@ -519,14 +531,14 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
         FPS = fps;
         this.deltaTime = dt;
 
-        if (showAlert == true && !showed)
+        /*if (showAlert == true && !showed)
         {
             showed = true;
             alert.setMessage("GameOver");
             AlertObj.RunAlert();
             showAlert = false;
             showed = false;
-        }
+        }*/
 
         switch (GameState)
         {
@@ -658,7 +670,10 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
                 if (miss)
                 {
-                    sounds.play(soundWrong, 1.0f, 1.0f, 0, 0, 1.5f);
+                    if (playEffects)
+                    {
+                        sounds.play(soundWrong, 1.0f, 1.0f, 0, 0, 1.5f);
+                    }
                     GameState = GAME_STATE.STATE_END;
                 }
 
@@ -784,7 +799,10 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
                                 --mushCount;
 
                                 miss = false;
-                                sounds.play(soundCorrect, 1.0f, 1.0f, 0, 0, 2.f);
+                                if (playEffects)
+                                {
+                                    sounds.play(soundCorrect, 1.0f, 1.0f, 0, 0, 1.f);
+                                }
                                 break;
                             }
                         }
@@ -792,9 +810,40 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
                     if (miss)
                     {
-                        showAlert = true;
+                        if (gameScore > lastScore)
+                        {
+                            switch(level)
+                            {
+                                case 1:
+                                    editor.putInt("level1highscore", gameScore);
+                                    editor.commit();
+                                    break;
+                                case 2:
+                                    editor.putInt("level2highscore", gameScore);
+                                    editor.commit();
+                                    break;
+                                case 3:
+                                    editor.putInt("level3highscore", gameScore);
+                                    editor.commit();
+                                    break;
+                            }
+
+                        }
+                        //showAlert = true;
                     }
-                    //sounds.play(soundWrong, 1.0f, 1.0f, 0, 0, 2.f);
+                }
+
+                if (GameState == GAME_STATE.STATE_END)
+                {
+                    if (CheckCollision(Math.round(ok.getPos().getX()), Math.round(ok.getPos().getY()),
+                            Math.round(ok.getTexture().getWidth()), Math.round(ok.getTexture().getHeight()), X, Y, 0, 0))
+                    {
+                        Intent intent = new Intent();
+                        intent.setClass(getContext(), WorldMap.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        activityTracker.startActivity(intent);
+                        activityTracker.finish();
+                    }
                 }
 
                 break;

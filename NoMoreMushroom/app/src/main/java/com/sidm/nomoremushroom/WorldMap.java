@@ -4,7 +4,10 @@ package com.sidm.nomoremushroom;
  * Created by Jun Xiang on 26/11/2015.
  */
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.net.MailTo;
 import android.os.Bundle;
 import android.view.View;
@@ -12,6 +15,7 @@ import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.TextView;
 
 public class WorldMap extends Activity implements OnClickListener
 {
@@ -19,6 +23,9 @@ public class WorldMap extends Activity implements OnClickListener
     private Button btn_play2;
     private Button btn_play3;
     private Button btn_options;
+    private Button btn_help;
+
+    private SharedPreferences sharePrefScore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -39,6 +46,24 @@ public class WorldMap extends Activity implements OnClickListener
 
         btn_options = (Button)findViewById(R.id.btn_options);
         btn_options.setOnClickListener(this);
+
+        btn_help = (Button)findViewById(R.id.btn_help);
+        btn_help.setOnClickListener(this);
+
+        sharePrefScore = getSharedPreferences("highscore", Context.MODE_PRIVATE);
+
+        TextView textView = (TextView) findViewById(R.id.level1score);
+        Typeface font = Typeface.createFromAsset(getAssets(), "fonts/Deanna.ttf");
+        textView.setTypeface(font);
+        textView.setText(Integer.toString(sharePrefScore.getInt("level1highscore", 0)));
+
+        textView = (TextView) findViewById(R.id.level2score);
+        textView.setTypeface(font);
+        textView.setText(Integer.toString(sharePrefScore.getInt("level2highscore", 0)));
+
+        textView = (TextView) findViewById(R.id.level3score);
+        textView.setTypeface(font);
+        textView.setText(Integer.toString(sharePrefScore.getInt("level3highscore", 0)));
     }
 
     public void onClick(View v)
@@ -48,6 +73,8 @@ public class WorldMap extends Activity implements OnClickListener
         if (v == btn_play1)
         {
             intent.setClass(this, GameLevel1.class);
+
+            // intent.addFlags(Intent.Flag_Acit...clear..top)
         }
 
         else if (v == btn_play2)
@@ -65,6 +92,12 @@ public class WorldMap extends Activity implements OnClickListener
             intent.setClass(this, Option.class);
         }
 
+        else if (v == btn_help)
+        {
+            intent.setClass(this, Instruction.class);
+        }
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 

@@ -46,6 +46,12 @@ public class Vec2
         this.y = y;
     }
 
+    public void setZero()
+    {
+        this.x = 0;
+        this.y = 0;
+    }
+
     public double length(Vec2 rhs)
     {
         double value = this.x * rhs.x + this.y * rhs.y;
