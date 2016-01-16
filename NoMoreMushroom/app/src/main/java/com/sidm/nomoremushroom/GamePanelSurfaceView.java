@@ -423,10 +423,12 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             myThread.start();
         }
 
-        if (playBGM)
+        if (!playBGM)
         {
-            bgm.start();
+            bgm.setVolume(0.f, 0.f);
         }
+
+        bgm.start();
     }
 
     public void surfaceDestroyed(SurfaceHolder holder)
@@ -448,13 +450,12 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
             }
         }
 
-        if (playBGM)
+        if (bgm != null)
         {
             bgm.stop();
+            bgm.release();
+            bgm = null;
         }
-
-        bgm.release();
-        bgm = null;
 
         sounds.unload(soundCorrect);
         sounds.unload(soundWrong);
@@ -835,9 +836,18 @@ public class GamePanelSurfaceView extends SurfaceView implements SurfaceHolder.C
 
                 if (GameState == GAME_STATE.STATE_END)
                 {
-                    if (CheckCollision(Math.round(ok.getPos().getX()), Math.round(ok.getPos().getY()),
+                    if (CheckCollision(Math.round(ok.getPos().getX() - ok.getTexture().getWidth() * 0.5f), Math.round(ok
+                                    .getPos().getY
+                                    ()),
                             Math.round(ok.getTexture().getWidth()), Math.round(ok.getTexture().getHeight()), X, Y, 0, 0))
                     {
+                        if (bgm != null)
+                        {
+                            bgm.stop();
+                            bgm.release();
+                            bgm = null;
+                        }
+
                         Intent intent = new Intent();
                         intent.setClass(getContext(), WorldMap.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
