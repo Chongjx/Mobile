@@ -3,6 +3,7 @@
     package="com.sidm.nomoremushroom" >
 
     <uses-permission android:name="android.permission.VIBRATE"></uses-permission>
+    <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -90,6 +91,20 @@
                 <category android:name="android.intent.category.default" />
             </intent-filter>
         </activity>
+
+        <activity android:name="com.facebook.FacebookActivity"
+                  android:label="WhatTheShip"
+                  android:theme="@android:style/Theme.Translucent.NoTitleBar"
+                  android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation">
+        </activity>
+
+        <meta-data android:name="com.facebook.sdk.ApplicationId"
+                   android:value="@string/app_id"/>
+
+        <provider android:name="com.facebook.FacebookContentProvider"
+                  android:exported="true"
+                  android:authorities="com.facebook.app.FacebookContentProvider1681857115422588"/>
+
     </application>
 
 </manifest>
